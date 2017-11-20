@@ -8,7 +8,12 @@
 
 import UIKit
 
-class AnimeCollectionViewController: UICollectionViewController, UICollectionViewDelegateFlowLayout, UISearchBarDelegate {
+class AnimeCollectionViewController: UIViewController, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout, UISearchBarDelegate {
+    
+    @IBOutlet weak var collectionView: UICollectionView!
+    
+    @IBOutlet weak var messageLabel: UILabel!
+    @IBOutlet weak var progressIndicator: UIActivityIndicatorView!
     
     let numberOfCellsPerRow: CGFloat = 2.0
     let cellMargin: CGFloat = 8.0
@@ -19,12 +24,30 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
     
     override func viewDidLoad() {
         self.showSearchButton()
+        self.showMessage(message: "Loading...\n\n(ﾉ^ヮ^)ﾉ*:・ﾟ✧", progress: true)
         self.loadAnime(completion: { (animes) -> Void in
-            self.animeList = animes
             DispatchQueue.main.async {
+                if animes.isEmpty {
+                    self.showMessage(message: "We couldn't find anything...\n\n(⌯˃̶᷄ ﹏ ˂̶᷄⌯)", progress: false)
+                }
+                self.hideMessage()
+                self.animeList = animes
                 self.collectionView?.reloadData()
             }
         })
+    }
+    
+    func showMessage(message: String, progress: Bool) {
+        self.messageLabel.isHidden = false
+        self.messageLabel.text = message
+        self.progressIndicator.startAnimating()
+        self.progressIndicator.isHidden = !progress
+    }
+    
+    func hideMessage() {
+        self.messageLabel.isHidden = true
+        self.progressIndicator.stopAnimating()
+        self.progressIndicator.isHidden = true
     }
     
     func showSearchButton() {
@@ -49,9 +72,15 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
         self.searchBar.endEditing(true)
         self.navigationItem.titleView = nil
         if let query = searchBar.text {
+            animeList = []
+            self.collectionView?.reloadData()
+            self.showMessage(message: "Estamos procurando!\n\no(^∀^*)o", progress: true)
             self.searchAnime(query: query) { (animes) in
                 self.animeList = animes
                 DispatchQueue.main.async {
+                    if animes.isEmpty {
+                        self.showMessage(message: "Não encontramos nada...\n\n(⌯˃̶᷄ ﹏ ˂̶᷄⌯)", progress: false)
+                    }
                     self.collectionView?.reloadData()
                 }
             }
@@ -67,15 +96,15 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
         self.showSearchButton()
     }
     
-    override func numberOfSections(in collectionView: UICollectionView) -> Int {
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 1
     }
     
-    override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+   func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return animeList.count
     }
     
-    override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "AnimeCell", for: indexPath) as! AnimeCollectionItem
         let i = indexPath.item
         cell.animeTitle.text = animeList[i].titleRomaji
@@ -85,7 +114,7 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
         return cell
     }
     
-    override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -114,16 +143,17 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
                         let animes = try decoder.decode([Anime].self, from: responseData)
                         completion(animes)
                     } catch {
-                        print("Houve um erro ao decodificar o JSON")
+                        print("Couldn't decode data to JSON")
                     }
                 } else {
                     completion([])
-                    print("Houve um problema ao carregar os dados")
+                    print("Something went wrong while requesting the data")
+                    self.showMessage(message: "Something went wrong...\n\n( ⚆ _ ⚆ )", progress: false)
                 }
             }.resume()
         } else {
             completion([])
-            print("URL mal formada")
+            print("Malformed URL")
         }
     }
     
@@ -139,16 +169,18 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
                         completion(animes)
                     } catch {
                         completion([])
-                        print("Houve um erro ao decodificar o JSON")
+                        print("Couldn't decode data to JSON")
                     }
                 } else {
                     completion([])
-                    print("Houve um problema ao carregar os dados")
+                    print("Something went wrong while requesting the data")
+                    self.showMessage(message: "Something went wrong...\n\n( ⚆ _ ⚆ )", progress: false)
                 }
                 }.resume()
         } else {
             completion([])
-            print("URL mal formada")
+            print("Malformed URL")
+            self.showMessage(message: "Something went wrong...\n\n( ⚆ _ ⚆ )", progress: false)
         }
     }
     
@@ -162,7 +194,7 @@ class AnimeCollectionViewController: UICollectionViewController, UICollectionVie
                     imageView.image = image
                 }
             } else {
-                print("Houve um problema ao carregar a imagem")
+                print("Something went wrong while loading the image")
             }
         }.resume()
     }
