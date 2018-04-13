@@ -91,6 +91,7 @@ class FavoritesCollectionViewController: UIViewController, UICollectionViewDataS
     }
 
     func loadImage(imageUrl: URL, imageView: UIImageView, progressIndicator: UIActivityIndicatorView) {
+        progressIndicator.hidesWhenStopped = true
         progressIndicator.startAnimating()
         URLSession.shared.dataTask(with: imageUrl) { (data, response, error) in
             if let data = data {
@@ -100,6 +101,7 @@ class FavoritesCollectionViewController: UIViewController, UICollectionViewDataS
                     imageView.image = image
                 }
             } else {
+                progressIndicator.stopAnimating()
                 print("Something went wrong while loading the image")
             }
             }.resume()

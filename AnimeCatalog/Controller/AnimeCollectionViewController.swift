@@ -21,10 +21,17 @@ class AnimeCollectionViewController: UIViewController, UICollectionViewDataSourc
     var animeList = [Anime]()
     
     lazy var searchBar = UISearchBar()
+    let refreshControl = UIRefreshControl()
     
     override func viewDidLoad() {
+        self.collectionView.refreshControl = refreshControl
+        self.refreshControl.addTarget(self, action: #selector(self.loadAnimes), for: .valueChanged)
         self.showSearchButton()
         self.showMessage(message: "Loading...\n\n(ﾉ^ヮ^)ﾉ*:・ﾟ✧", progress: true)
+        self.loadAnimes()
+    }
+    
+    @objc func loadAnimes() {
         self.loadAnime(completion: { (animes) -> Void in
             DispatchQueue.main.async {
                 if animes.isEmpty {
@@ -32,6 +39,7 @@ class AnimeCollectionViewController: UIViewController, UICollectionViewDataSourc
                 }
                 self.hideMessage()
                 self.animeList = animes
+                self.refreshControl.endRefreshing()
                 self.collectionView?.reloadData()
             }
         })
@@ -74,14 +82,15 @@ class AnimeCollectionViewController: UIViewController, UICollectionViewDataSourc
         if let query = searchBar.text {
             animeList = []
             self.collectionView?.reloadData()
-            self.showMessage(message: "Estamos procurando!\n\no(^∀^*)o", progress: true)
+            self.showMessage(message: "Hang on, we're looking for it...!\n\no(^∀^*)o", progress: true)
             self.searchAnime(query: query) { (animes) in
                 self.animeList = animes
                 DispatchQueue.main.async {
                     if animes.isEmpty {
-                        self.showMessage(message: "Não encontramos nada...\n\n(⌯˃̶᷄ ﹏ ˂̶᷄⌯)", progress: false)
+                        self.showMessage(message: "We couldn't find anything...\n\n(⌯˃̶᷄ ﹏ ˂̶᷄⌯)", progress: false)
                     }
                     self.collectionView?.reloadData()
+                    self.hideMessage()
                 }
             }
         }
@@ -185,6 +194,7 @@ class AnimeCollectionViewController: UIViewController, UICollectionViewDataSourc
     }
     
     func loadImage(imageUrl: URL, imageView: UIImageView, progressIndicator: UIActivityIndicatorView) {
+        progressIndicator.hidesWhenStopped = true
         progressIndicator.startAnimating()
         URLSession.shared.dataTask(with: imageUrl) { (data, response, error) in
             if let data = data {
@@ -194,6 +204,7 @@ class AnimeCollectionViewController: UIViewController, UICollectionViewDataSourc
                     imageView.image = image
                 }
             } else {
+                progressIndicator.stopAnimating()
                 print("Something went wrong while loading the image")
             }
         }.resume()
